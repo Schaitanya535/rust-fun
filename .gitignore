@@ -1,0 +1,6 @@
+/target
+
+# AoC actual puzzle inputs (per AoC terms of service)
+inputs/**/*.txt
+!inputs/**/*_sample.txt
+.DS_Store
