@@ -15,9 +15,22 @@ pub fn part1(input: &str) -> i64 {
         .sum();
 }
 
-pub fn part2(input: &str) -> String {
-    let _lines: Vec<&str> = input.lines().collect();
-    "not implemented".to_string()
+pub fn part2(input: &str) -> i64 {
+    let ranges: Vec<(i64, i64)> = input.lines().flat_map(utils::read_ranges).collect();
+
+    fn is_repeating(num: i64) -> bool {
+        let s = num.to_string();
+        let n = s.len();
+        (1..=n / 2).filter(|&len| n % len == 0).any(|len| {
+            let pattern = &s[..len];
+            pattern.repeat(n / len) == s
+        })
+    }
+
+    return ranges
+        .into_iter()
+        .map(|(a, b)| (a..=b).filter(|&num| is_repeating(num)).sum::<i64>())
+        .sum();
 }
 
 #[cfg(test)]
@@ -35,7 +48,8 @@ mod tests {
 
     #[test]
     fn test_part2_sample() {
-        assert_eq!(part2(SAMPLE), "not implemented");
+        dbg!(part2(SAMPLE));
+        dbg!(part2(ACTUAL));
     }
 
     // Uncomment once you have your real input and know the answer:
