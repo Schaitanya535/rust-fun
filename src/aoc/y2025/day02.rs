@@ -42,14 +42,14 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        dbg!(part1(SAMPLE));
-        dbg!(part1(ACTUAL));
+        assert_eq!(part1(SAMPLE), 1227775554);
+        assert_eq!(part1(ACTUAL), 37314786486);
     }
 
     #[test]
     fn test_part2_sample() {
-        dbg!(part2(SAMPLE));
-        dbg!(part2(ACTUAL));
+        assert_eq!(part2(SAMPLE), 4174379265);
+        assert_eq!(part2(ACTUAL), 47477053982);
     }
 
     // Uncomment once you have your real input and know the answer:
