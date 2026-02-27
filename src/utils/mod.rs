@@ -1,6 +1,22 @@
+pub const DIRS_4: [(i32, i32); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+pub const DIRS_8: [(i32, i32); 8] = [
+    (0, 1),
+    (1, 0),
+    (0, -1),
+    (-1, 0),
+    (1, 1),
+    (-1, 1),
+    (1, -1),
+    (-1, -1),
+];
+
 /// Split input into lines, trimming trailing whitespace.
 pub fn lines(input: &str) -> Vec<&str> {
     input.lines().collect()
+}
+
+pub fn read_char_grid(input: &str) -> Vec<Vec<char>> {
+    input.lines().map(|line| line.chars().collect()).collect()
 }
 
 /// Parse a line like "1234-1239, 123-234, 51534-54565" into [(1234,1239), (123,234), ...]
