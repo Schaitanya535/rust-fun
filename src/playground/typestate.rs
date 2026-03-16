@@ -1,25 +1,27 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 pub struct Kid;
 
 #[derive(Debug, Clone)]
 pub struct Adult {
-    pub can_drive: bool,
+    pub driving_skill: u8,
+    pub licensed: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Person<State> {
     name: String,
-    age: i8,
+    age: u8,
     status: State,
 }
 
 impl Person<Kid> {
-    pub fn new(name: String, age: i8) -> Person<Kid> {
+    pub fn new(name: String, age: u8) -> Person<Kid> {
         Person::<Kid> {
-            name: name,
-            age: age,
+            name,
+            age,
             status: Kid,
         }
     }
@@ -34,7 +36,10 @@ impl Person<Kid> {
         }
 
         Ok(Person::<Adult> {
-            status: Adult { can_drive: false },
+            status: Adult {
+                driving_skill: 0,
+                licensed: false,
+            },
             name: self.name,
             age: self.age,
         })
@@ -42,7 +47,19 @@ impl Person<Kid> {
 }
 
 impl Person<Adult> {
-    pub fn get_driving_license(&mut self) {
-        self.status.can_drive = true
+    pub fn gain_driving_skill(&mut self) {
+        let gain = rand::thread_rng().gen_range(1..=20);
+        self.status.driving_skill = self.status.driving_skill.saturating_add(gain);
+    }
+
+    pub fn get_driving_license(&mut self) -> Result<()> {
+        if self.status.driving_skill < 50 {
+            bail!(
+                "Need a skill of 50 to get a license, current: {}",
+                self.status.driving_skill
+            );
+        }
+        self.status.licensed = true;
+        Ok(())
     }
 }

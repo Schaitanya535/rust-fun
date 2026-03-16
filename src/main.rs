@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use anyhow::Result;
 use crate::playground::typestate::Person;
+use anyhow::Result;
 mod aoc;
 mod playground;
 mod utils;
@@ -9,9 +9,14 @@ mod utils;
 fn main() -> Result<()> {
     let person = Person::new("Chaitanya".to_string(), 19);
     dbg!(&person);
-    let mut adult_person = person.transform_to_adult()?;
-    dbg!(&adult_person);
-    adult_person.get_driving_license();
-    dbg!(&adult_person);
+    let mut person = person.transform_to_adult()?;
+    dbg!(&person);
+
+    while person.get_driving_license().is_err() {
+        person.gain_driving_skill();
+        dbg!(&person);
+    }
+
+    dbg!(&person);
     Ok(())
 }
