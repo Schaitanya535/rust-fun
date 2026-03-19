@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use rand::Rng;
 
 #[derive(Debug, Clone)]
@@ -54,12 +54,20 @@ impl Person<Adult> {
 
     pub fn get_driving_license(&mut self) -> Result<()> {
         if self.status.driving_skill < 50 {
-            bail!(
-                "Need a skill of 50 to get a license, current: {}",
-                self.status.driving_skill
-            );
+            bail!("Need a skill of 50 to get a license, current: {}", self.status.driving_skill);
         }
         self.status.licensed = true;
         Ok(())
     }
+}
+
+pub fn run() -> Result<()> {
+    let person = Person::new("Chaitanya".to_string(), 19);
+    dbg!(&person);
+    let mut person = person.transform_to_adult()?;
+    while person.get_driving_license().is_err() {
+        person.gain_driving_skill();
+    }
+    dbg!(&person);
+    Ok(())
 }
