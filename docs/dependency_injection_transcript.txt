@@ -1,0 +1,355 @@
+YouTube Transcript: Dependency Injection
+URL: https://www.youtube.com/watch?v=J1f5b4vcxCQ
+
+dependency injection is a term I don't
+love because it sounds a lot more fancy
+than it is
+dependency injection is simply when you
+have a piece of code
+which uses another piece of code and
+instead of using that code directly it's
+passed in instead
+when you pass something in to be used we
+call it injection we inject the
+dependent code into the code that uses
+it while this part is quite simple it
+unlocks some very powerful side effects
+that we're going to cover
+we have a business app where users can
+chat with their co-workers
+they can also send pictures and files to
+each other when a user sends something
+the file gets uploaded to our attachment
+service
+the attachment service is responsible
+for storing retrieving and processing
+all attachments
+we're going to build up this whole
+service using dependency injection and
+we'll see what it enables us to do
+[Music]
+when a user sends a message with an
+attachment the message text gets sent to
+our standard chat service
+we want people to receive their messages
+almost real time so this service is all
+about speed the attachment on the other
+hand gets uploaded to our attachment
+service there's an endpoint in our node
+service attachment slash upload that the
+app connects to and uploads a file the
+attachment gets stored on the disk
+temporarily process in a few ways we'll
+talk about and then upload it to its
+final destination
+the default storage location is an S3 a
+part of Amazon's web services it's a
+simple storage service that lets you put
+up files and pull them down
+we have some code here that takes the
+uploaded file and then uploads it to S3
+unfortunately simple and elegant doesn't
+always like to co-exist with business
+while S3 is nice and straightforward and
+most of our clients are okay with it we
+have a few firms that don't want us to
+permanently store their data this means
+we actually need our service to handle
+multiple storage locations then
+depending on which company a user is
+from we need to put their attachments in
+the right place
+most of these picky clients just give us
+an SFTP server to connect to but one
+really wanted us to use webdev
+our first thought might be to Simply
+extend our upload code with some if
+statements
+and then have the caller of the upload
+method pass in where to upload the file
+this is awkward for a few reasons first
+this one class has a ton of
+responsibility making the code pretty
+ugly
+the code for SFTP is intermingled with
+the code from AWS and web dev even
+though they're pretty different
+there's a lot of paths the code can take
+and that makes the code harder to
+understand
+second using the class isn't very simple
+we have this one upload function which
+needs a bunch of info for where we're
+going to upload the attachment
+but what info it needs is very different
+depending on where it's going if it's
+AWS we need the AWS keys if it's SFTP we
+need the address and private key and
+webdav needs a URL in auth key so we're
+kind of forced to have a bunch of these
+optional variables that need to be
+filled out in certain cases and then
+comments to tell you which ones to fill
+out this makes it pretty easy for the
+caller to make a mistake
+and finally the part of the code that
+actually calls upload over here needs to
+have all of this destination specific
+context to perform the upload
+but really at this phase it just wants
+to upload
+the part of the code that knows best
+which company a user is from and can
+deduce where the file should go is up
+here at the beginning of the request but
+right now we're forced to pass all of
+this information around
+let's see what happens if we use
+dependency injection instead let's
+create an interface that represents our
+attachment storage which contains a key
+upload method that does what the request
+Handler wants to do upload an attachment
+then we create three different
+implementations of the storage interface
+the configuration for each is passed
+into their Constructor
+there's no more optional variables that
+sometimes need to be set
+we require exactly these values and you
+get an error if you forget one
+so now once the user is authenticated
+and we know which company they're from
+we create the storage that the request
+Handler should use
+instead of the configuration needing to
+be passed all the way to the request
+Handler only the storage is passed to or
+injected into the request Handler
+it's not aware of which storage is
+passed in or where the file is going it
+just knows that it can call upload
+that said this construction code is
+still a little too complex to put here
+so let's see if we can clean this up
+if we look at the input here it's really
+just this company configuration
+and the output is the storage which
+conforms to the storage interface so we
+can just move this out to a factory
+great but saving to the final storage
+destination is the last step of the
+process
+we have all these other stages that the
+upload goes through
+foreign
+each upload through a virus scanner
+this checks the files for signatures of
+obvious viruses
+then if the file is an image we scale it
+down to a Max width of 2500 pixels
+this is what we display to the user when
+they click on an image because it uses
+less bandwidth and loads faster
+[Music]
+then the file goes through preview
+generation this is basically the
+thumbnail that pops up underneath an
+attachment in the chat so the user can
+see what the attachment is without fully
+downloading it
+then the last step is encryption
+if we're storing the files on Amazon's
+S3 we pre-encrypt the files before
+setting them up that way if there's a
+security breach at Amazon we can say
+they're encrypted when we have to send
+it one of those we were hacked by the
+way emails
+so let's see how we can make each of
+these requirements fit cleanly into our
+service
+for the virus scanner we currently use a
+scanner called threat protect however
+Synergy security scanner has much better
+detection kpis and our plan is to switch
+to it but sadly we haven't finalized the
+deal with Synergy we're only allowed to
+test with it in our development
+environment not in production no worries
+we can create a shared interface for our
+two scanners
+and on initialization we pick one
+and inject that one into the request
+Handler
+when we launch in development mode
+Synergy security is initialized and in
+production the old threat protect
+scanner is created our request Handler
+just scans the files but doesn't know
+which scanner is doing it
+for image scaling we use the sharp
+Library
+in order to inject that we simply wrap
+it up in an image scalar interface
+the interface also contains a method
+which tells us if an attachment supports
+scaling
+we injected into our upload request and
+only scale if the attachment supports it
+preview generation is the most complex
+given how many types of attachments
+there could be
+we have an interface that represents the
+different preview generators it takes
+the input file and then Returns the
+preview image we have one implementation
+that handles document files like word
+docs slides Etc
+one for videos which extracts the
+thumbnail from the video and one for
+images but the image one can thankfully
+just reuse our image scaler
+we just inject the same image scaler
+from before into the image preview
+generator
+so we have all these preview generator
+classes but we only need one at a time
+depending on which file type is being
+uploaded the upload request shouldn't
+need to worry about these details
+we'll inject a factory which takes on
+the burden of deciding which preview
+generator to create
+the factory takes in the mime type of
+the upload and then Returns the right
+preview generator to use
+so now the upload can simply just ask
+the factory for the preview generator
+and then use it
+and lastly we have encryption
+we only have one implementation of
+encryption we use AES
+but the key is per user and comes from
+our key service
+so we inject our key service into the
+AES encryption
+and then the AES encryption into the
+storage Factory
+then whenever we get a request for a
+company that's configured to use AWS the
+storage Factory injects the AES
+encryption into the new instance of AES
+storage
+then the upload request gets this final
+constructed AWS storage and simply calls
+upload without knowing that there's this
+whole chain of connected functionality
+and now we have our complete
+architecture
+you can see that our service is
+configurable from this one spot which
+makes it super easy to change
+once our deal with Synergy security goes
+through it's just these two lines to
+change our service want to add preview
+support for a new file type it just
+slots in like this no access to the key
+server when running the attachment
+service on your local development box no
+worries we can just use a fixed key when
+running locally
+injection basically just lets us pick
+and choose from our compatible puzzle
+pieces and then slot them in when we
+need them
+you'll notice that the time in which
+dependencies are injected varies a bit a
+few dependencies are resolved and
+injected right at startup
+this is often the most common scenario
+in dependency injection
+but some dependencies are chosen and
+injected when a request comes in
+either case their process is mostly the
+same we have some code that accomplishes
+something it lists the dependencies it
+needs and so we fulfill those needs
+you might wonder why go through the
+hassle of creating interfaces and
+injecting things when we only have one
+implementation like we only have one
+implementation of encryption
+well there's one big thing we haven't
+talked about
+if you look at our architecture here
+most of our components talk to each
+other through these interfaces which are
+injected in this means that each of
+these connection points we can control
+what is being used we've been using this
+to choose which implementation to use in
+our production service but we can also
+make them use no implementation we can
+use injection to inject fake or mock
+implementations instead which basically
+means we can slice and dice up our
+architecture to isolate sections of code
+during testing
+let's say we want to write a test for
+our AWS storage class
+we can use a fake S3 which we run
+locally that pretends to be the cloud
+service then our task can call upload
+and we can verify that a file got
+uploaded to S3
+but because of the encryption we can't
+actually check the content of the file
+and verify that it's correct and didn't
+get corrupted
+not to worry let's inject a mock
+encryption that basically just disables
+encryption when the AWS storage class
+asks us to encrypt a file we'll just
+hand back a file that isn't actually
+encrypted
+now our test is able to verify fully
+that uploading and only uploading works
+because we've isolated it away from our
+dependencies
+what if we wanted to test encryption
+well we could mock out the key store to
+return a key that we control instead of
+going all the way to the key service
+or if we wanted to integration test both
+our AWS code and encryption code
+together we could do that by injecting
+our fake keystore into the real
+encryption
+and then inject the real encryption into
+the AWS storage
+a key thing here is that this is easy to
+do
+a natural side effect of having nice
+code is that it's easy to test without
+needing to hack around the code
+structure if you find yourself asking
+how can I test a private method or I
+need to set some internal variable in
+order to test that's a signal that you
+maybe need to pull some stuff out that
+you need to isolate some part of it by
+separating it and injecting it instead
+foreign
+I truly think you only learned stuff by
+trying stuff so for those subscribe to
+my patreon I'm going to start including
+some light experiments with videos
+for this one you can download the
+attachment service I wrote and I want
+you to reconfigure the service by
+changing the dependency injection
+and then you get to win some aesthetic
+points if you enter the results on the
+site
+[Music]
