@@ -17,7 +17,8 @@ pub fn run() -> Result<()> {
 
     let storage = factory::CompanyStorage::S3 {
         bucket: "acme-attachments".into(),
-    }.into_storage();
+    }
+    .into_storage();
 
     let service = service::AttachmentService::new(storage, scanner);
     service.upload("report.pdf", b"fake file content")?;
@@ -26,7 +27,8 @@ pub fn run() -> Result<()> {
 
     let storage2 = factory::CompanyStorage::Sftp {
         host: "sftp.picky-client.com".into(),
-    }.into_storage();
+    }
+    .into_storage();
     let scanner2: Box<dyn traits::Scanner> = Box::new(scanner::ThreatProtect);
 
     let service2 = service::AttachmentService::new(storage2, scanner2);
